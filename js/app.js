@@ -254,6 +254,7 @@
   }
   function bindSettings() {
     const pal = document.querySelector('[data-set="palette"]');
+    if (!DP.PALETTES[DP.settings.palette]) DP.settings.palette = DEF.palette;
     Object.entries(DP.PALETTES).forEach(([k, p]) => pal.append(h('option', { value: k }, p.name)));
     document.querySelectorAll('[data-set]').forEach((inp) => {
       const k = inp.dataset.set;
