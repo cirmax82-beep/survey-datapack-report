@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>조사 자료 그래프</title>
+  <meta name="description" content="동식물상 조사 종합 데이터 팩(엑셀)을 불러와 표와 그래프로 보고, 보고서용 그림(PNG·SVG)과 표(CSV)를 받습니다. 파일은 브라우저 안에서만 읽습니다." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b7285'/%3E%3Crect x='7' y='16' width='4' height='9' rx='1' fill='%23fff'/%3E%3Crect x='14' y='10' width='4' height='15' rx='1' fill='%23fff'/%3E%3Crect x='21' y='6' width='4' height='19' rx='1' fill='%23fff'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
+</head>
+<body>
+  <header class="top">
+    <h1 class="brand"><a href="./">조사 자료 그래프</a></h1>
+    <div class="file">
+      <button type="button" id="btn-open" class="btn primary">엑셀 불러오기</button>
+      <button type="button" id="btn-reread" class="btn" hidden title="같은 파일을 다시 읽어 그립니다">다시 읽기</button>
+      <label class="chk" id="watch-wrap" hidden title="엑셀에서 저장하면 몇 초 안에 다시 그립니다"><input type="checkbox" id="chk-watch" /> 저장하면 자동 반영</label>
+      <span id="file-info" class="file-info"></span>
+      <input type="file" id="file-input" accept=".xlsx,.xlsm,.xls" hidden />
+    </div>
+  </header>
+
+  <div class="setbar" id="setbar" hidden>
+    <label class="ctl">그래프 너비 <input type="range" min="30" max="100" step="5" data-set="chartW" /><output data-out="chartW"></output></label>
+    <label class="ctl">높이 <input type="range" min="200" max="1000" step="20" data-set="chartH" /><output data-out="chartH"></output></label>
+    <label class="ctl">그래프 글자 <input type="range" min="9" max="28" step="1" data-set="font" /><output data-out="font"></output></label>
+    <label class="ctl">표 글자 <input type="range" min="10" max="22" step="1" data-set="tableFont" /><output data-out="tableFont"></output></label>
+    <label class="ctl">그림 배율
+      <select data-set="res" title="PNG를 받을 때 화면 크기의 몇 배로 만들지">
+        <option value="1">1배</option><option value="2">2배</option><option value="3">3배</option><option value="4">4배</option>
+      </select>
+    </label>
+    <label class="ctl">색 <select data-set="palette"></select></label>
+    <label class="chk" title="흑백 인쇄나 색 구별이 어려울 때 막대·조각에 무늬"><input type="checkbox" data-set="decal" /> 무늬</label>
+    <label class="chk"><input type="checkbox" data-set="showTitle" /> 그림에 제목</label>
+    <button type="button" class="btn sm" id="btn-reset" title="그래프 크기·글자·색을 처음 값으로">보기 초기화</button>
+    <button type="button" class="btn sm" id="btn-clear" title="그래프·표마다 고른 것을 처음 상태로">선택 초기화</button>
+  </div>
+
+  <div class="layout">
+    <nav class="side" id="side" hidden aria-label="시트">
+      <select id="nav-sel" class="nav-sel" aria-label="시트 고르기"></select>
+      <div id="nav"></div>
+    </nav>
+    <main id="main">
+      <section class="hello">
+        <h2>종합 데이터 팩(Excel)을 불러오세요</h2>
+        <p>파일을 이 화면에 끌어다 놓거나 <b>엑셀 불러오기</b>를 누르면 시트마다 표와 그래프를 그립니다.</p>
+        <p class="muted">파일은 이 브라우저 안에서만 읽고 어디로도 보내지 않습니다. 조사가 바뀌면 새 파일을 다시 불러오면 됩니다.</p>
+        <button type="button" class="btn primary" onclick="document.getElementById('btn-open').click()">엑셀 불러오기</button>
+      </section>
+    </main>
+  </div>
+
+  <div id="drop" class="drop" hidden><div>여기에 놓으면 불러옵니다</div></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+  <script src="js/util.js?v=3"></script>
+  <script src="js/parse.js?v=3"></script>
+  <script src="js/table.js?v=3"></script>
+  <script src="js/chart.js?v=3"></script>
+  <script src="js/views.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
+</body>
+</html>
