@@ -148,6 +148,16 @@
     return { fileName, loadedAt: Date.now(), sheets };
   };
 
+  // 시트별 열 이름 바꾸기: 식물 집계표의 '소계'(종+아종+변종+품종)는 보고서 관례대로 '분류군'
+  const RENAME = [[/관속식물|식물.*집계/, { 소계: '분류군' }]];
+  function renameHeaders(base, blocks) {
+    RENAME.forEach(([re, map]) => {
+      if (!re.test(base)) return;
+      blocks.forEach((b) => (b.header = b.header.map((hd) => (map[hd] && !b.header.includes(map[hd]) ? map[hd] : hd))));
+    });
+    return blocks;
+  }
+
   DP.buildModel = function (raw) {
     const groups = [];
     const byKey = new Map();
@@ -160,7 +170,7 @@
         byKey.set(key, g);
         groups.push(g);
       }
-      g.items.push({ round: p.round, label: p.round != null ? p.round + '차' : '', sheetName: s.name, blocks: splitBlocks(s.aoa) });
+      g.items.push({ round: p.round, label: p.round != null ? p.round + '차' : '', sheetName: s.name, blocks: renameHeaders(p.base, splitBlocks(s.aoa)) });
     });
     groups.forEach((g) => g.items.sort((a, b) => (a.round || 0) - (b.round || 0)));
     return { fileName: raw.fileName, loadedAt: raw.loadedAt, groups };

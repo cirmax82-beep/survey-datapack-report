@@ -737,7 +737,7 @@
     const ti = b.flags.findIndex((f) => f.total);
     return {
       cards: [
-        tableCard(b, 'fgs', '분류군별 과·속·종 수', { type: 'bar', series: [/^과/, /^속/, /^종/] }),
+        tableCard(b, 'fgs', '분류체계별 과·속·종·분류군 수', { type: 'bar', series: [/^과/, /^속/, /^종/, /^분류군$/] }),
         ti >= 0
           ? tableCard(b, 'rank', '분류 계급별 구성(' + b.labels[ti] + ')', {
               type: 'pie',
