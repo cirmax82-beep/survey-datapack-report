@@ -597,6 +597,84 @@
     };
   }
 
+  /* ── 지점 이름에 차수가 붙은 시트('1차_W-1', 'W-1_2차') → 지점 × 차수 ── */
+  function splitRound(v) {
+    const s = str(v);
+    let m = s.match(/^(\d+)\s*차\s*[_\-.:\s]*\s*(\S.*)$/);
+    if (m) return { round: m[1] + '차', site: m[2].trim() };
+    m = s.match(/^(.*\S)\s*[_\-.\s(]\s*(\d+)\s*차\)?$/);
+    if (m) return { round: m[2] + '차', site: m[1].trim() };
+    return null;
+  }
+  function siteRounds(b) {
+    const data = b.rows.map((r, i) => ({ r, i })).filter((x) => !b.flags[x.i].total);
+    data.forEach((x) => (x.p = splitRound(x.r[b.catCol])));
+    if (!data.length || data.some((x) => !x.p)) return null;
+    const rounds = [...new Set(data.map((x) => x.p.round))].sort(DP.natCmp);
+    const sites = [...new Set(data.map((x) => x.p.site))].sort(DP.natCmp);
+    if (rounds.length < 2) return null;
+    const get = (site, round) => {
+      const x = data.find((d) => d.p.site === site && d.p.round === round);
+      return x ? x.r : null;
+    };
+    return { rounds, sites, get };
+  }
+
+  // 지점(항목) × 차수(계열), 값 열은 골라서
+  function siteRoundCard(b, sr, o) {
+    const names = b.numCols.map((c) => b.header[c]);
+    if (!names.length) return null;
+    const def = names.find((n) => o.def && o.def.test(n)) || names[0];
+    return {
+      id: o.id,
+      title: '지점·차수별 ' + def,
+      titleFn: (ex) => '지점·차수별 ' + ex.metric,
+      extras: [{ key: 'metric', label: '값', options: opts(names), default: def }],
+      defaults: { type: 'bar', series: ALL },
+      compute: (ex) => {
+        const c = b.header.indexOf(ex.metric);
+        return {
+          catHeader: '조사지점',
+          categories: sr.sites.slice(),
+          catInfo: o.info
+            ? sr.sites.map((s) =>
+                sr.rounds
+                  .map((rd) => {
+                    const r = sr.get(s, rd);
+                    const t = r && o.info(r, ex.metric);
+                    return t ? rd + ' ' + t : '';
+                  })
+                  .filter(Boolean)
+                  .join(' / ')
+              )
+            : null,
+          series: sr.rounds.map((rd) => ({
+            name: rd,
+            values: sr.sites.map((s) => {
+              const r = sr.get(s, rd);
+              return r && c >= 0 ? P.numOf(r[c], b.types[c]) : null;
+            }),
+          })),
+        };
+      },
+    };
+  }
+
+  // 보고서용 표: 지점 한 줄에 1차·2차 값을 나란히
+  function siteRoundTable(b, sr) {
+    const cols = b.header.map((_, j) => j).filter((j) => j !== b.catCol);
+    const header = ['조사지점'].concat(...sr.rounds.map((rd) => cols.map((j) => rd + ' ' + b.header[j])));
+    const rows = sr.sites.map((s) =>
+      [s].concat(
+        ...sr.rounds.map((rd) => {
+          const r = sr.get(s, rd);
+          return cols.map((j) => (r ? r[j] : null));
+        })
+      )
+    );
+    return { title: '지점 × 차수 표', key: 'site-round', block: P.analyze(header, rows) };
+  }
+
   function dominance(item) {
     const b = item.blocks[0];
     if (!b || !b.rows.length) return { cards: [] };
@@ -604,27 +682,53 @@
     const d2 = col(b, /^아우점종$/);
     const info = (r) =>
       [d1 >= 0 && P.filled(r[d1]) ? '우점종: ' + str(r[d1]) : '', d2 >= 0 && P.filled(r[d2]) ? '아우점종: ' + str(r[d2]) : ''].filter(Boolean).join(' / ');
-    return { cards: [tableCard(b, 'dom', '지점별 우점종·아우점종 개체수', { type: 'bar', series: [/^우점종\s*개체수/, /^아우점종\s*개체수/] }, { info })] };
+    const cards = [];
+    const tables = [];
+    const sr = siteRounds(b);
+    if (sr) {
+      // 고른 값이 '우점종 개체수'면 툴팁에 그 차수의 우점종 이름
+      const spInfo = (r, metric) => {
+        const j = b.header.indexOf(metric.replace(/\s*개체수$/, ''));
+        return j >= 0 && P.filled(r[j]) ? str(r[j]) : '';
+      };
+      cards.push(siteRoundCard(b, sr, { id: 'dom-round', def: /^우점종\s*개체수/, info: spInfo }));
+      tables.push(siteRoundTable(b, sr));
+    }
+    cards.push(tableCard(b, 'dom', '지점별 우점종·아우점종 개체수', { type: 'bar', series: [/^우점종\s*개체수/, /^아우점종\s*개체수/] }, { info }));
+    return { cards, tables };
   }
 
   function water(item) {
     const b = item.blocks[0];
     if (!b || !b.rows.length) return { cards: [] };
-    const cards = [tableCard(b, 'idx', '지점별 생물 지수', { type: 'bar', series: [/^TESB/i] })];
+    const sr = siteRounds(b);
+    const cards = [];
+    const tables = [];
+    if (sr) {
+      const sj = col(b, /환경상태/);
+      cards.push(siteRoundCard(b, sr, { id: 'idx-round', def: /^TESB/i, info: (r) => (sj >= 0 && P.filled(r[sj]) ? str(r[sj]) : '') }));
+      tables.push(siteRoundTable(b, sr));
+    }
+    cards.push(tableCard(b, 'idx', '지점별 생물 지수', { type: 'bar', series: [/^TESB/i] }));
     ['환경상태', 'CLASS', '생물다양성', '관리수역'].forEach((nm) => {
       const j = col(b, new RegExp('^' + nm, 'i'));
       if (j < 0) return;
       cards.push({
         id: 'cnt-' + nm,
         title: b.header[j] + '별 지점 수',
-        defaults: { type: 'bar' },
+        defaults: { type: 'bar', series: ALL },
         compute: () => {
           const cats = distinct(b, j).sort(DP.natCmp);
-          return { catHeader: b.header[j], categories: cats, series: [{ name: '지점 수', values: cats.map((c) => dataRows(b).filter((r) => str(r[j]) === c).length) }] };
+          const count = (test) => cats.map((c) => dataRows(b).filter((r) => str(r[j]) === c && test(r)).length);
+          // 차수가 있으면 차수별로 나눠 셈
+          const series = sr
+            ? sr.rounds.map((rd) => ({ name: rd, values: count((r) => (splitRound(r[b.catCol]) || {}).round === rd) }))
+            : [{ name: '지점 수', values: count(() => true) }];
+          return { catHeader: b.header[j], categories: cats, series };
         },
       });
     });
-    return { cards };
+    return { cards, tables };
   }
 
   function vascular(item) {

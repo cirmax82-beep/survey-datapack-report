@@ -219,6 +219,13 @@
       c.mount(grid);
     });
 
+    // 시트를 다시 짠 표(예: 지점 × 차수)
+    (res.tables || []).forEach((t) => {
+      const sec = h('section', { class: 'tbl-sec' }, h('h3', null, t.title));
+      main.append(sec);
+      DP.renderTable(sec, t.block, { key: g.key + ':' + t.key, name: sheetTitle + '_' + t.title });
+    });
+
     if (!compare) {
       if (!item.blocks.length) main.append(h('p', { class: 'empty' }, '빈 시트입니다.'));
       item.blocks.forEach((b, bi) => {
